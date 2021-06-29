@@ -1,10 +1,9 @@
 #include <linux/uaccess.h>
-#include <linux/kernel.h>
 #include <linux/module.h>
-#include <linux/random.h>
 #include <linux/init.h>
 #include <linux/fs.h>
 #include <linux/cdev.h>
+#include <linux/slab.h>
 
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Yes, hello");
@@ -33,10 +32,12 @@ static int major;
 struct grot_info {
     struct cdev cdev;
 
-    char msg[GROT_MSG_SIZE];
-    char custom;
+    char init;
     char busy;
     char eof;
+    char custom;
+
+    char *msg;
 };
 
 static ssize_t grot_info_write_msg(struct grot_info *g, const char *buf, ssize_t len)
@@ -67,10 +68,10 @@ static ssize_t grot_info_read_msg(struct grot_info *g, char *buf, size_t n)
     }
 
     if (!g->custom) {
-        pr_info("grot: setting default msg");
+        pr_info("grot: setting default message");
         strcpy(g->msg, GROT_DEFAULT_MSG);
     }
-
+    
     len = strlen(g->msg);
     if (copy_to_user(buf, g->msg, len)) {
         pr_alert("grot: copy_to_user");
@@ -81,28 +82,38 @@ static ssize_t grot_info_read_msg(struct grot_info *g, char *buf, size_t n)
     return len;
 }
 
+static void grot_info_init(struct grot_info *g)
+{
+    if (g->init) {
+        return;
+    }
+
+    g->msg = kmalloc(GROT_MSG_SIZE, GFP_KERNEL);
+    g->init = 1;
+}
+
 static ssize_t grot_dev_read(struct file *f, char *buf, size_t n, loff_t *of)
 {
-    struct grot_info *info;
-    info = (struct grot_info *)f->private_data;
+    struct grot_info *info = f->private_data;
     return grot_info_read_msg(info, buf, n);
 }
 
 static ssize_t grot_dev_write(struct file *f, const char __user *buf, size_t len, loff_t *off)
 {
-    struct grot_info *info;
-    info = (struct grot_info *)f->private_data;    
+    struct grot_info *info = f->private_data;
     return grot_info_write_msg(info, buf, len);
 }
 
+
 static int grot_dev_open(struct inode *ino, struct file *f)
 {    
-    struct grot_info *info;
-    info = container_of(ino->i_cdev, struct grot_info, cdev);
+    struct grot_info *info = container_of(ino->i_cdev, struct grot_info, cdev);
+
     if (info->busy) {
         return -EBUSY;
     }
 
+    grot_info_init(info);
     info->eof = 0;
     info->busy = 1;
     
@@ -114,9 +125,7 @@ static int grot_dev_open(struct inode *ino, struct file *f)
 
 static int grot_dev_release(struct inode *ino, struct file *f)
 {
-    struct grot_info *info;
-    info = (struct grot_info *)f->private_data;
-
+    struct grot_info *info = f->private_data;
     info->busy = 0;
     
     module_put(THIS_MODULE); /* we're finished */
@@ -127,6 +136,7 @@ static int grot_dev_release(struct inode *ino, struct file *f)
 static void kexit(void)
 {
     unregister_chrdev(major, "grot");
+    
     return;
 }
 
