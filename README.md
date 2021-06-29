@@ -37,7 +37,7 @@ git clone git@github.com:56quarters/modgrot.git && cd modgrot
 If you're on Ubuntu, this is a package called `linux-source` and should match
 the version of the kernel you're running.
 
-Installing it will leave you with a tarball of source code at 
+Installing it will leave you with a tarball of source code at
 `/usr/src/linux-source-5.4.0.tar.bz2`. Copy this tarball, unzip the contents
 in your `modgrot` repo.
 
@@ -98,22 +98,12 @@ sudo make qemu
 ```
 
 If everything worked, you'll have an Ubuntu VM starting up with the default
-user `ubuntu` and the password `ubuntu`.
+user `ubuntu` and the password `ubuntu`, with a directory shared with the host.
 
-Inside the **running VM** run the following commands.
+Next step, load the module in your VM.
 
 ```
-sudo -i
-mkdir /mnt/shared
-mount -t 9p -o trans=virtio host0 /mnt/shared
 cd /mnt/shared
-ls
-```
-
-If that worked you should see files from the `modgrot` repo. Next step, load
-the module in your VM.
-
-```
 insmod grot.ko
 MAJOR=$(grep grot /proc/devices | cut -d ' ' -f 1)
 mknod /dev/grot c $MAJOR 0
