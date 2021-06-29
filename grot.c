@@ -35,25 +35,27 @@ struct grot_info {
 
     char msg[GROT_MSG_SIZE];
     char custom;
-
     char busy;
     char eof;
 };
 
 static ssize_t grot_info_write_msg(struct grot_info *g, const char *buf, ssize_t len)
 {
+    ssize_t res;
     if (len >= GROT_MSG_SIZE - 1) {
         pr_alert("grot: input too large");
         return -EINVAL;
     }
 
-    if (copy_from_user(g->msg, buf, len)) {
-        pr_alert("grot: copy_from_user");
-    } else {
-        g->msg[len] = '\0';
-        g->custom = 1;
+    pr_info("grot: sizeof(g->msg)=%ld len=%ld", sizeof(g->msg), len);
+    res = copy_from_user(g->msg, buf, len);
+    if (res != 0) {
+        pr_alert("grot: copy_from_user. err=%ld", res);
+        return -EINVAL;
     }
-    
+
+    g->msg[len] = '\0';
+    g->custom = 1;
     return len;
 }
 
