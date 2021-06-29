@@ -115,8 +115,8 @@ the module in your VM.
 
 ```
 insmod grot.ko
-grep grot /proc/devices
-mknod /dev/grot c $NUMBER_FROM_ABOVE 0
+MAJOR=$(grep grot /proc/devices | cut -d ' ' -f 1)
+mknod /dev/grot c $MAJOR 0
 ```
 
 Try reading.
