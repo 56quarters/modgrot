@@ -1,0 +1,7 @@
+grot.ko
+grot.mod*
+.grot*
+linux
+Module.symvers
+*.o
+modules.order
