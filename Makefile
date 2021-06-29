@@ -6,11 +6,14 @@ all:
 clean:
 	make -C linux M=grot clean
 
-machine/focal-current.img:
+machine:
+	mkdir -p machine
+
+machine/focal-current.img: machine
 	wget -O machine/focal-current.img 'https://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-amd64.img'
 	qemu-img resize machine/focal-current.img 20G
 
-machine/user-data.img: cloud-init.yaml
+machine/user-data.img: cloud-init.yaml machine
 	cloud-localds machine/user-data.img cloud-init.yaml
 
 qemu-download: machine/focal-current.img
@@ -25,7 +28,7 @@ qemu: qemu-cloud-init qemu-download
 		-vga virtio \
 		-drive file=machine/focal-current.img,format=qcow2 \
 		-drive file=machine/user-data.img,format=raw \
-		-virtfs local,path=.,mount_tag=host0,security_model=passthrough,readonly,id=host0
+		-virtfs local,path=.,mount_tag=host0,security_model=passthrough,id=host0
 
 # in guest:
 # $ mkdir /mnt/shared
