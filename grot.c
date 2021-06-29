@@ -24,6 +24,7 @@
 #include <linux/cdev.h>
 #include <linux/slab.h>
 #include <linux/types.h>
+#include <linux/mutex.h>
 
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Yes, hello");
@@ -47,16 +48,17 @@ static struct file_operations fops = {
     .release = grot_dev_release
 };
 
+/* major device number for /dev/grot */
 static int major;
+
+/* lock for protecting the info struct */
+static struct mutex lock;
 
 struct grot_info {
     struct cdev cdev;
 
     /* has one-time initialization of this struct been performed */
     u8 init;
-
-    /* is the device currently open */
-    u8 busy;
 
     /* has all data been read from the device */
     u8 eof;
@@ -73,51 +75,59 @@ static ssize_t grot_dev_read(struct file *f, char *buf, size_t n, loff_t *of)
     struct grot_info *info = f->private_data;
     ssize_t len = 0;
 
-    if (info->eof) {
-        return len;
-    }
+    mutex_lock(&lock);
 
-    if (!info->custom) {
-        pr_info("grot: setting default message");
-        strcpy(info->msg, GROT_DEFAULT_MSG);
-    }
-    
-    len = strlen(info->msg);
-    if (copy_to_user(buf, info->msg, len)) {
-        pr_alert("grot: copy_to_user");
+    if (!info->eof) {
+        if (!info->custom) {
+            pr_info("grot: setting default message");
+            strcpy(info->msg, GROT_DEFAULT_MSG);
+        }
+
+        len = strlen(info->msg);
+        if (copy_to_user(buf, info->msg, len)) {
+            pr_alert("grot: copy_to_user");
+        }
     }
 
     info->custom = 0;
     info->eof = 1;
+
+    mutex_unlock(&lock);
     return len;
 }
 
 static ssize_t grot_dev_write(struct file *f, const char __user *buf, size_t len, loff_t *off)
 {
     struct grot_info *info = f->private_data;
+    ssize_t written = 0;
 
     if (len >= GROT_MSG_SIZE - 1) {
         pr_alert("grot: input too large");
         return -EINVAL;
     }
 
+    mutex_lock(&lock);
+
     if (copy_from_user(info->msg, buf, len)) {
         pr_alert("grot: copy_from_user");
-        return -EINVAL;
+        written = -EINVAL;
+    } else {
+        info->msg[len] = '\0';
+        info->custom = 1;
+        written = len;
     }
 
-    info->msg[len] = '\0';
-    info->custom = 1;
-    return len;
+    mutex_unlock(&lock);
+    return written;
 }
 
 
 static int grot_dev_open(struct inode *ino, struct file *f)
-{    
-    struct grot_info *info = container_of(ino->i_cdev, struct grot_info, cdev);
-    if (info->busy) {
-        return -EBUSY;
-    }
+{
+    struct grot_info *info;
+
+    mutex_lock(&lock);
+    info = container_of(ino->i_cdev, struct grot_info, cdev);
 
     if (!info->init) {
         info->msg = kmalloc(GROT_MSG_SIZE, GFP_KERNEL);
@@ -125,20 +135,16 @@ static int grot_dev_open(struct inode *ino, struct file *f)
     }
 
     info->eof = 0;
-    info->busy = 1;
-
     f->private_data = info;
     try_module_get(THIS_MODULE);
     pr_info("grot: open");
 
+    mutex_unlock(&lock);
     return 0;
 }
 
 static int grot_dev_release(struct inode *ino, struct file *f)
 {
-    struct grot_info *info = f->private_data;
-    info->busy = 0;
-
     module_put(THIS_MODULE);
     pr_info("grot: release");
 
@@ -159,6 +165,7 @@ static int kinit(void)
         pr_alert("grot: register_chrdev %d", major);
     }
 
+    mutex_init(&lock);
     return 0;
 }
 
