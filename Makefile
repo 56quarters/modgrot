@@ -6,14 +6,13 @@ all:
 clean:
 	make -C linux M=grot clean
 
-machine:
+machine/focal-current.img:
 	mkdir -p machine
-
-machine/focal-current.img: machine
 	wget -O machine/focal-current.img 'https://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-amd64.img'
 	qemu-img resize machine/focal-current.img 20G
 
-machine/user-data.img: cloud-init.yaml machine
+machine/user-data.img: cloud-init.yaml
+	mkdir -p machine
 	cloud-localds machine/user-data.img cloud-init.yaml
 
 qemu-download: machine/focal-current.img
