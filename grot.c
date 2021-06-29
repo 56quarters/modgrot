@@ -23,6 +23,7 @@
 #include <linux/fs.h>
 #include <linux/cdev.h>
 #include <linux/slab.h>
+#include <linux/types.h>
 
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Yes, hello");
@@ -52,18 +53,18 @@ struct grot_info {
     struct cdev cdev;
 
     /* has one-time initialization of this struct been performed */
-    char init;
+    u8 init;
 
     /* is the device currently open */
-    char busy;
+    u8 busy;
 
     /* has all data been read from the device */
-    char eof;
+    u8 eof;
 
     /* is there a custom message to use instead of the default */
-    char custom;
+    u8 custom;
 
-    /* custom or default message to send to emit */
+    /* custom or default message to emit */
     char *msg;
 };
 

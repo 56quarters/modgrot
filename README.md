@@ -17,17 +17,16 @@ That's it.
 
 ## Why?
 
-Everyone knows that you need to be running inside the kernel to go fast.
+Gotta go fast.
 
 ## Setup
 
-If you want kernel mode `modgrot` features locally, the steps below are good
-start to build and load the module.
+Follow the steps below to build and load `modgrot`.
 
 **WARNING** Loading kernel modules has the potential to crash your machine
-and I'm not very good at writing C. You have been warned!
+and I'm not very good at writing C. You have been warned!!!
 
-### Get modgrot
+### Get modgrot source
 
 ```
 git clone git@github.com:56quarters/modgrot.git && cd modgrot
@@ -35,7 +34,8 @@ git clone git@github.com:56quarters/modgrot.git && cd modgrot
 
 ### Get kernel source
 
-If you're on Ubuntu, this is a package called `linux-source`.
+If you're on Ubuntu, this is a package called `linux-source` and should match
+the version of the kernel you're running.
 
 Installing it will leave you with a tarball of source code at 
 `/usr/src/linux-source-5.4.0.tar.bz2`. Copy this tarball, unzip the contents
@@ -119,3 +119,11 @@ Yes, hello
 ```
 
 Bam.
+
+## References
+
+* https://lyngvaer.no/log/writing-pseudo-device-driver
+* https://linux-kernel-labs.github.io/refs/heads/master/labs/device_drivers.html
+* https://powersj.io/posts/ubuntu-qemu-cli/
+* https://superuser.com/questions/628169/how-to-share-a-directory-with-the-host-without-networking-in-qemu
+* https://www.kernel.org/doc/htmldocs/kernel-hacking/
