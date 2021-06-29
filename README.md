@@ -64,6 +64,14 @@ make oldconfig
 make prepare
 make scripts
 ```
+
+In the kernel sources directory, copy `Modules.symvers` from your local
+modules to our copy of the kernel source.
+
+```
+cp /lib/modules/`uname -r`/build/Module.symvers .
+```
+
 ### Build
 
 If everything worked, you should be able to build the module now from the
