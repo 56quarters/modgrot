@@ -1,7 +1,8 @@
+*.o
 grot.ko
 grot.mod*
 .grot*
 linux
+machine
 Module.symvers
-*.o
 modules.order

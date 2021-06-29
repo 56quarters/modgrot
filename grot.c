@@ -40,86 +40,69 @@ struct grot_info {
     char *msg;
 };
 
-static ssize_t grot_info_write_msg(struct grot_info *g, const char *buf, ssize_t len)
-{
-    ssize_t res;
-    if (len >= GROT_MSG_SIZE - 1) {
-        pr_alert("grot: input too large");
-        return -EINVAL;
-    }
-
-    pr_info("grot: sizeof(g->msg)=%ld len=%ld", sizeof(g->msg), len);
-    res = copy_from_user(g->msg, buf, len);
-    if (res != 0) {
-        pr_alert("grot: copy_from_user. err=%ld", res);
-        return -EINVAL;
-    }
-
-    g->msg[len] = '\0';
-    g->custom = 1;
-    return len;
-}
-
-static ssize_t grot_info_read_msg(struct grot_info *g, char *buf, size_t n)
-{
-    ssize_t len;
-    if (g->eof) {
-        return 0;
-    }
-
-    if (!g->custom) {
-        pr_info("grot: setting default message");
-        strcpy(g->msg, GROT_DEFAULT_MSG);
-    }
-    
-    len = strlen(g->msg);
-    if (copy_to_user(buf, g->msg, len)) {
-        pr_alert("grot: copy_to_user");
-    }
-
-    g->custom = 0;
-    g->eof = 1;
-    return len;
-}
-
-static void grot_info_init(struct grot_info *g)
-{
-    if (g->init) {
-        return;
-    }
-
-    g->msg = kmalloc(GROT_MSG_SIZE, GFP_KERNEL);
-    g->init = 1;
-}
-
 static ssize_t grot_dev_read(struct file *f, char *buf, size_t n, loff_t *of)
 {
     struct grot_info *info = f->private_data;
-    return grot_info_read_msg(info, buf, n);
+    ssize_t len = 0;
+
+    if (info->eof) {
+        return len;
+    }
+
+    if (!info->custom) {
+        pr_info("grot: setting default message");
+        strcpy(info->msg, GROT_DEFAULT_MSG);
+    }
+    
+    len = strlen(info->msg);
+    if (copy_to_user(buf, info->msg, len)) {
+        pr_alert("grot: copy_to_user");
+    }
+
+    info->custom = 0;
+    info->eof = 1;
+    return len;
 }
 
 static ssize_t grot_dev_write(struct file *f, const char __user *buf, size_t len, loff_t *off)
 {
     struct grot_info *info = f->private_data;
-    return grot_info_write_msg(info, buf, len);
+
+    if (len >= GROT_MSG_SIZE - 1) {
+        pr_alert("grot: input too large");
+        return -EINVAL;
+    }
+
+    if (copy_from_user(info->msg, buf, len)) {
+        pr_alert("grot: copy_from_user");
+        return -EINVAL;
+    }
+
+    info->msg[len] = '\0';
+    info->custom = 1;
+    return len;
 }
 
 
 static int grot_dev_open(struct inode *ino, struct file *f)
 {    
     struct grot_info *info = container_of(ino->i_cdev, struct grot_info, cdev);
-
     if (info->busy) {
         return -EBUSY;
     }
 
-    grot_info_init(info);
+    if (!info->init) {
+        info->msg = kmalloc(GROT_MSG_SIZE, GFP_KERNEL);
+        info->init = 1;
+    }
+
     info->eof = 0;
     info->busy = 1;
-    
+
     f->private_data = info;
-    try_module_get(THIS_MODULE); /* tell the system that we're live */
+    try_module_get(THIS_MODULE);
     pr_info("grot: open");
+
     return 0;
 }
 
@@ -127,17 +110,16 @@ static int grot_dev_release(struct inode *ino, struct file *f)
 {
     struct grot_info *info = f->private_data;
     info->busy = 0;
-    
-    module_put(THIS_MODULE); /* we're finished */
+
+    module_put(THIS_MODULE);
     pr_info("grot: release");
+
     return 0;
 }
 
 static void kexit(void)
 {
     unregister_chrdev(major, "grot");
-    
-    return;
 }
 
 static int kinit(void)
