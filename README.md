@@ -131,3 +131,4 @@ Bam.
 * https://powersj.io/posts/ubuntu-qemu-cli/
 * https://superuser.com/questions/628169/how-to-share-a-directory-with-the-host-without-networking-in-qemu
 * https://www.kernel.org/doc/htmldocs/kernel-hacking/
+* https://cloudinit.readthedocs.io/en/latest/topics/examples.html
