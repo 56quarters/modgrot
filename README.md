@@ -17,7 +17,8 @@ That's it.
 
 ## Why?
 
-Gotta go fast.
+Gotta go fast. Moving Slack bot functionality into the Linux kernel was
+the next logical evolution. For some reason.
 
 ## Setup
 
@@ -25,6 +26,11 @@ Follow the steps below to build and load `modgrot`.
 
 **WARNING** Loading kernel modules has the potential to crash your machine
 and I'm not very good at writing C. You have been warned!!!
+
+Assumptions:
+
+* You are running Ubuntu 20.04 LTS (Focal Fossa) as your host OS
+* You will use an Ubuntu 20.04 LTS (Focal Fossa) as your guest OS (QEMU VM)
 
 ### Get modgrot source
 

@@ -1,4 +1,4 @@
-/* Grot - Yes, hello
+/* modgrot - Yes, hello
  *
  * Copyright (C) 2021 Nick Pillitteri
  *
