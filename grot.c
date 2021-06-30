@@ -75,7 +75,9 @@ static ssize_t grot_dev_read(struct file *f, char *buf, size_t n, loff_t *of)
     struct grot_info *info = f->private_data;
     ssize_t len = 0;
 
-    mutex_lock(&lock);
+    if (mutex_lock_interruptible(&lock)) {
+        return -EINTR;
+    }
 
     if (!info->eof) {
         if (!info->custom) {
@@ -106,7 +108,9 @@ static ssize_t grot_dev_write(struct file *f, const char __user *buf, size_t len
         return -EINVAL;
     }
 
-    mutex_lock(&lock);
+    if (mutex_lock_interruptible(&lock)) {
+        return -EINTR;
+    }
 
     if (copy_from_user(info->msg, buf, len)) {
         pr_alert("grot: copy_from_user");
@@ -126,7 +130,10 @@ static int grot_dev_open(struct inode *ino, struct file *f)
 {
     struct grot_info *info;
 
-    mutex_lock(&lock);
+    if (mutex_lock_interruptible(&lock)) {
+        return -EINTR;
+    }
+
     info = container_of(ino->i_cdev, struct grot_info, cdev);
 
     if (!info->init) {
