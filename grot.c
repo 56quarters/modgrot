@@ -81,7 +81,7 @@ struct grot_info {
 static ssize_t grot_dev_read(struct file *f, char *buf, size_t n, loff_t *of)
 {
     struct grot_info *info = f->private_data;
-    char *msg = GROT_DEFAULT_MSG;
+    char *msg = "";
     ssize_t len = 0;
 
     if (mutex_lock_interruptible(&lock)) {
@@ -91,6 +91,8 @@ static ssize_t grot_dev_read(struct file *f, char *buf, size_t n, loff_t *of)
     if (!info->eof) {
         if (info->custom) {
             msg = info->msg;
+        } else {
+            msg = GROT_DEFAULT_MSG;
         }
 
         len = strlen(msg);
