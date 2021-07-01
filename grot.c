@@ -73,6 +73,7 @@ struct grot_info {
 static ssize_t grot_dev_read(struct file *f, char *buf, size_t n, loff_t *of)
 {
     struct grot_info *info = f->private_data;
+    char *msg = GROT_DEFAULT_MSG;
     ssize_t len = 0;
 
     if (mutex_lock_interruptible(&lock)) {
@@ -80,14 +81,14 @@ static ssize_t grot_dev_read(struct file *f, char *buf, size_t n, loff_t *of)
     }
 
     if (!info->eof) {
-        if (!info->custom) {
-            pr_info("grot: setting default message");
-            strcpy(info->msg, GROT_DEFAULT_MSG);
+        if (info->custom) {
+            msg = info->msg;
         }
 
-        len = strlen(info->msg);
-        if (copy_to_user(buf, info->msg, len)) {
+        len = strlen(msg);
+        if (copy_to_user(buf, msg, len)) {
             pr_alert("grot: copy_to_user");
+            len = -EFAULT;
         }
     }
 
@@ -114,7 +115,7 @@ static ssize_t grot_dev_write(struct file *f, const char __user *buf, size_t len
 
     if (copy_from_user(info->msg, buf, len)) {
         pr_alert("grot: copy_from_user");
-        written = -EINVAL;
+        written = -EFAULT;
     } else {
         info->msg[len] = '\0';
         info->custom = 1;
@@ -137,6 +138,7 @@ static int grot_dev_open(struct inode *ino, struct file *f)
     info = container_of(ino->i_cdev, struct grot_info, cdev);
 
     if (!info->init) {
+        pr_info("grot: one-time init");
         info->msg = kmalloc(GROT_MSG_SIZE, GFP_KERNEL);
         info->init = 1;
     }
