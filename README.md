@@ -109,13 +109,12 @@ user `ubuntu` and the password `ubuntu`, with a directory shared with the host.
 Next step, load the module in your VM.
 
 ```
+sudo -i
 cd /mnt/shared
 insmod grot.ko
-MAJOR=$(grep grot /proc/devices | cut -d ' ' -f 1)
-mknod /dev/grot c $MAJOR 0
 ```
 
-Try reading.
+Try reading the newly created device.
 
 ```
 cat /dev/grot

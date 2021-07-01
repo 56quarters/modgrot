@@ -25,6 +25,8 @@
 #include <linux/slab.h>
 #include <linux/types.h>
 #include <linux/mutex.h>
+#include <linux/device.h>
+#include <linux/kdev_t.h>
 
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Yes, hello");
@@ -32,6 +34,8 @@ MODULE_AUTHOR("56quarters");
 MODULE_VERSION("0.1");
 MODULE_SUPPORTED_DEVICE("grot");
 
+#define GROT_DEV_NAME "grot"
+#define GROT_DEV_CLASS "grot"
 #define GROT_MSG_SIZE 255
 #define GROT_DEFAULT_MSG "Yes, hello\n"
 
@@ -48,8 +52,12 @@ static struct file_operations fops = {
     .release = grot_dev_release
 };
 
-/* major device number for /dev/grot */
-static int major;
+
+/* major / minor device number */
+static dev_t dev = 0;
+
+/* device class created on module insert */
+static struct class *dev_class;
 
 /* lock for protecting the info struct */
 static struct mutex lock;
@@ -162,20 +170,42 @@ static int grot_dev_release(struct inode *ino, struct file *f)
 
 static void kexit(void)
 {
-    unregister_chrdev(major, "grot");
+    device_destroy(dev_class, dev);
+    class_destroy(dev_class);
+    unregister_chrdev(dev, GROT_DEV_NAME);
 }
 
 static int kinit(void)
 {
-    /* register as a character device */
-    major = register_chrdev(0, "grot", &fops);
 
+    int major = register_chrdev(0, GROT_DEV_NAME, &fops);
     if (major < 0) {
         pr_alert("grot: register_chrdev %d", major);
+        return major;
     }
 
+    dev = MKDEV(major, 0);
+    dev_class = class_create(THIS_MODULE, GROT_DEV_CLASS);
+    if (NULL == dev_class) {
+        pr_alert("grot: class_create");
+        goto out_class;
+    }
+
+    if (NULL == device_create(dev_class, NULL, dev, NULL, GROT_DEV_NAME)) {
+        pr_alert("grot: device_create");
+        goto out_device;
+    }
+
+    pr_info("grot: major=%d minor=%d", MAJOR(dev), MINOR(dev));
     mutex_init(&lock);
     return 0;
+
+out_device:
+    class_destroy(dev_class);
+
+out_class:
+    unregister_chrdev(dev, GROT_DEV_NAME);
+    return -1;
 }
 
 module_init(kinit);
