@@ -54,7 +54,7 @@ struct grot_info {
     /* is there a custom message to use instead of the default */
     u8 custom;
 
-    /* custom or default message to emit */
+    /* custom message to emit */
     char *msg;
 };
 
@@ -70,20 +70,31 @@ static struct file_operations fops = {
 static dev_t dev = 0;
 
 /* device class created on module insert */
-static struct class *dev_class;
+static struct class *dev_class = NULL;
 
 /* device information */
-static struct grot_info info;
+static struct grot_info *info = NULL;
 
-static void grot_info_init(struct grot_info *g) {
+
+static struct grot_info *grot_info_new(void)
+{
+    struct grot_info *g = kmalloc(sizeof(struct grot_info), GFP_KERNEL);
+
     mutex_init(&g->lock);
     g->msg = kmalloc(GROT_MSG_SIZE, GFP_KERNEL);
     g->eof = 0;
     g->custom = 0;
+
+    pr_info("grot: global state setup");
+    return g;
 }
 
-static void grot_info_cleanup(struct grot_info *g) {
+static void grot_info_destroy(struct grot_info *g)
+{
     kfree(g->msg);
+    kfree(g);
+
+    pr_info("grot: global state cleanup");
 }
 
 static ssize_t grot_dev_read(struct file *f, char *buf, size_t n, loff_t *of)
@@ -147,16 +158,16 @@ static ssize_t grot_dev_write(struct file *f, const char __user *buf, size_t len
 
 static int grot_dev_open(struct inode *ino, struct file *f)
 {
-    if (mutex_lock_interruptible(&info.lock)) {
+    if (mutex_lock_interruptible(&info->lock)) {
         return -EINTR;
     }
 
-    info.eof = 0;
-    f->private_data = &info;
+    info->eof = 0;
+    f->private_data = info;
     try_module_get(THIS_MODULE);
     pr_info("grot: open");
 
-    mutex_unlock(&info.lock);
+    mutex_unlock(&info->lock);
     return 0;
 }
 
@@ -172,14 +183,14 @@ static void kexit(void)
     device_destroy(dev_class, dev);
     class_destroy(dev_class);
     unregister_chrdev(dev, GROT_DEV_NAME);
-    grot_info_cleanup(&info);
+    grot_info_destroy(info);
 }
 
 static int kinit(void)
 {
     int major = 0;
 
-    grot_info_init(&info);
+    info = grot_info_new();
     major = register_chrdev(0, GROT_DEV_NAME, &fops);
     if (major < 0) {
         pr_alert("grot: register_chrdev %d", major);
@@ -208,7 +219,7 @@ out_class:
     unregister_chrdev(dev, GROT_DEV_NAME);
 
 out_info:
-    grot_info_cleanup(&info);
+    grot_info_destroy(info);
     return -1;
 }
 
