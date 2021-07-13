@@ -40,38 +40,14 @@ git clone git@github.com:56quarters/modgrot.git && cd modgrot
 
 ### Get kernel source
 
-If you're on Ubuntu, this is a package called `linux-source` and should match
-the version of the kernel you're running.
-
-Installing it will leave you with a tarball of source code at
-`/usr/src/linux-source-5.4.0.tar.bz2`. Copy this tarball, unzip the contents
-in your `modgrot` repo.
+The modgrot `Makefile` will download, unpack, and configure sources for the
+5.4 Linux kernel (since this is what Ubuntu 20.04 LTS uses).
 
 ```
-cp /usr/src/linux-source-5.4.0.tar.bz2 .
-tar -xf linux-source-5.4.0.tar.bz2
+make linux-setup
 ```
 
-Rename the sources directory and create a symlink back to `modgrot` sources.
-
-```
-mv linux-source-5.4.0 linux
-cd linux
-ln -s .. grot
-```
-
-### Kernel setup
-
-In the kernel sources directory, run the following commands to get it
-roughly setup.
-
-```
-make oldconfig
-make prepare
-make scripts
-```
-
-In the kernel sources directory, copy `Modules.symvers` from your local
+Next, in the kernel sources directory, copy `Modules.symvers` from your local
 modules to our copy of the kernel source.
 
 ```

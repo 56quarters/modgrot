@@ -3,6 +3,7 @@ grot.ko
 grot.mod*
 .grot*
 linux
+linux.tar.gz
 machine
 Module.symvers
 modules.order

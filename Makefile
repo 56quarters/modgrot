@@ -6,6 +6,19 @@ all:
 clean:
 	make -C linux M=grot clean
 
+linux.tar.gz:
+	wget -O linux.tar.gz 'https://github.com/torvalds/linux/archive/refs/tags/v5.4.tar.gz'
+
+linux/grot: linux.tar.gz
+	tar -xf linux.tar.gz
+	mv linux-5.4 linux
+	cd linux && ln -s .. grot
+
+linux-setup: linux/grot
+	make -C linux olddefconfig
+	make -C linux prepare
+	make -C linux scripts
+
 machine/focal-current.img:
 	mkdir -p machine
 	wget -O machine/focal-current.img 'https://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-amd64.img'
