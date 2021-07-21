@@ -108,12 +108,7 @@ static ssize_t grot_dev_read(struct file *f, char *buf, size_t n, loff_t *of)
     }
 
     if (!g->eof) {
-        if (g->custom) {
-            msg = g->msg;
-        } else {
-            msg = GROT_DEFAULT_MSG;
-        }
-
+        msg = g->custom ? g->msg : GROT_DEFAULT_MSG;
         len = strlen(msg);
         if (copy_to_user(buf, msg, len)) {
             pr_alert("grot: copy_to_user");
